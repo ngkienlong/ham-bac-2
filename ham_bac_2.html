@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Đồ thị hàm bậc 2: y = a(x-h)² + k</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      margin: 0; /* Bỏ khoảng trắng phía trên */
+      background: #fff;
+    }
+    .center-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    #controls { 
+      margin-bottom: 16px; 
+      text-align: center;
+    }
+    label { margin-right: 12px; }
+    canvas { border: 1px solid #888; background: #fff; display: block; }
+    .equation { 
+      margin-bottom: 16px; 
+      font-size: 1.2em; 
+      font-weight: bold;
+      text-align: center;
+    }
+    h2 { text-align: center; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="center-container">
+    <h2>Đồ thị hàm số bậc 2: y = a(x-h)² + k</h2>
+    <div class="equation" id="equation"></div>
+    <div id="controls">
+      <label>a: <input type="range" id="a" min="-3" max="3" step="0.1" value="1"> <span id="a_val">1</span></label>
+      <label>h: <input type="range" id="h" min="-5" max="5" step="0.1" value="0"> <span id="h_val">0</span></label>
+      <label>k: <input type="range" id="k" min="-5" max="5" step="0.1" value="0"> <span id="k_val">0</span></label>
+    </div>
+    <div style="position: relative; width: 500px; height: 500px;">
+      <canvas id="graph" width="500" height="500" style="position: absolute; left: 0; top: 0; z-index: 1;"></canvas>
+      <!-- Tung độ và hoành độ trên khung hình vuông -->
+      <div id="axis-labels" style="position: absolute; left: 0; top: 0; width: 500px; height: 500px; pointer-events: none; z-index: 2;"></div>
+    </div>
+  </div>
+  <script>
+    const canvas = document.getElementById('graph');
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width, height = canvas.height;
+    const xMin = -10, xMax = 10, yMin = -10, yMax = 10;
+    const scaleX = width / (xMax - xMin);
+    const scaleY = height / (yMax - yMin);
+
+    function toCanvasX(x) { return (x - xMin) * scaleX; }
+    function toCanvasY(y) { return height - (y - yMin) * scaleY; }
+
+    function drawGrid() {
+      ctx.clearRect(0, 0, width, height);
+      ctx.strokeStyle = "#eee";
+      ctx.lineWidth = 1;
+      // Vertical grid
+      for (let x = Math.ceil(xMin); x <= xMax; x++) {
+        ctx.beginPath();
+        ctx.moveTo(toCanvasX(x), 0);
+        ctx.lineTo(toCanvasX(x), height);
+        ctx.stroke();
+      }
+      // Horizontal grid
+      for (let y = Math.ceil(yMin); y <= yMax; y++) {
+        ctx.beginPath();
+        ctx.moveTo(0, toCanvasY(y));
+        ctx.lineTo(width, toCanvasY(y));
+        ctx.stroke();
+      }
+      // Axes
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 2;
+      // y-axis
+      ctx.beginPath();
+      ctx.moveTo(toCanvasX(0), 0);
+      ctx.lineTo(toCanvasX(0), height);
+      ctx.stroke();
+      // x-axis
+      ctx.beginPath();
+      ctx.moveTo(0, toCanvasY(0));
+      ctx.lineTo(width, toCanvasY(0));
+      ctx.stroke();
+    }
+
+    // Vẽ nhãn trục số ra ngoài khung hình vuông
+    function drawAxisLabels() {
+      const axisDiv = document.getElementById('axis-labels');
+      axisDiv.innerHTML = '';
+      // Hoành độ (x)
+      for (let x = Math.ceil(xMin); x <= xMax; x++) {
+        if (x !== 0) {
+          const label = document.createElement('div');
+          label.textContent = x;
+          label.style.position = 'absolute';
+          label.style.left = `${toCanvasX(x) - 10}px`;
+          label.style.top = `${toCanvasY(0) + 4}px`;
+          label.style.fontSize = '11px';
+          label.style.color = '#888';
+          label.style.width = '20px';
+          label.style.textAlign = 'center';
+          axisDiv.appendChild(label);
+        }
+      }
+      // Tung độ (y)
+      for (let y = Math.ceil(yMin); y <= yMax; y++) {
+        if (y !== 0) {
+          const label = document.createElement('div');
+          label.textContent = y;
+          label.style.position = 'absolute';
+          label.style.left = `${toCanvasX(0) - 24}px`;
+          label.style.top = `${toCanvasY(y) - 8}px`;
+          label.style.fontSize = '11px';
+          label.style.color = '#888';
+          label.style.width = '20px';
+          label.style.textAlign = 'right';
+          axisDiv.appendChild(label);
+        }
+      }
+      // Gốc tọa độ
+      const zero = document.createElement('div');
+      zero.textContent = '0';
+      zero.style.position = 'absolute';
+      zero.style.left = `${toCanvasX(0) + 2}px`;
+      zero.style.top = `${toCanvasY(0) + 4}px`;
+      zero.style.fontSize = '11px';
+      zero.style.color = '#000';
+      zero.style.fontWeight = 'bold';
+      axisDiv.appendChild(zero);
+    }
+
+    function drawParabola(a, h, k) {
+      ctx.save();
+      ctx.strokeStyle = "orange";
+      ctx.lineWidth = 3; // Tăng độ dày
+      ctx.beginPath();
+      let first = true;
+      for (let px = 0; px <= width; px++) {
+        let x = xMin + px / scaleX;
+        let y = a * Math.pow(x - h, 2) + k;
+        let py = toCanvasY(y);
+        if (first) {
+          ctx.moveTo(px, py);
+          first = false;
+        } else {
+          ctx.lineTo(px, py);
+        }
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawRoots(a, h, k) {
+      // Solve a(x-h)^2 + k = 0 => (x-h)^2 = -k/a
+      let roots = [];
+      if (a !== 0) {
+        let delta = -k / a;
+        if (delta > -1e-8) { // allow small negative due to float error
+          delta = Math.max(0, delta);
+          let sqrtDelta = Math.sqrt(delta);
+          let x1 = h + sqrtDelta;
+          let x2 = h - sqrtDelta;
+          roots.push(x1, x2);
+        }
+      }
+      ctx.save();
+      ctx.fillStyle = "#22a";
+      ctx.font = "bold 14px Arial";
+      roots.forEach(x => {
+        if (x >= xMin && x <= xMax) {
+          let y = 0;
+          let cx = toCanvasX(x), cy = toCanvasY(y);
+          ctx.beginPath();
+          ctx.arc(cx, cy, 5, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.fillText(`(${x.toFixed(2)}, 0)`, cx + 8, cy - 8);
+        }
+      });
+      ctx.restore();
+    }
+
+    function updateEquation(a, h, k) {
+      // y = a(x-h)^2 + k = ax^2 - 2ahx + (ah^2 + k)
+      let b = -2 * a * h;
+      let c = a * h * h + k;
+      let eq = `y = ${a}(x${h >= 0 ? '-' : '+'}${Math.abs(h)})² ${k >= 0 ? '+' : '-'} ${Math.abs(k)} = `
+              + `${a}x² ${b >= 0 ? '+' : '-'} ${Math.abs(b)}x ${c >= 0 ? '+' : '-'} ${Math.abs(c)}`;
+      document.getElementById('equation').innerHTML = eq;
+    }
+
+    function update() {
+      let a = parseFloat(document.getElementById('a').value);
+      let h = parseFloat(document.getElementById('h').value);
+      let k = parseFloat(document.getElementById('k').value);
+      document.getElementById('a_val').textContent = a;
+      document.getElementById('h_val').textContent = h;
+      document.getElementById('k_val').textContent = k;
+      drawGrid();
+      drawParabola(a, h, k);
+      drawRoots(a, h, k);
+      updateEquation(a, h, k);
+      drawAxisLabels();
+    }
+
+    document.getElementById('a').addEventListener('input', update);
+    document.getElementById('h').addEventListener('input', update);
+    document.getElementById('k').addEventListener('input', update);
+
+    update();
+  </script>
+</body>
+</html>
